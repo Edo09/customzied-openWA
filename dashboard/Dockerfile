@@ -3,11 +3,14 @@ FROM node:22-slim AS builder
 
 WORKDIR /app
 
+# Build tools for native deps — mirrors the API Dockerfile, which builds fine on the VPS
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (npm install tolerates cross-platform optional deps better than npm ci)
-RUN npm install
+# Install dependencies
+RUN npm ci
 
 # Copy source code
 COPY . .
