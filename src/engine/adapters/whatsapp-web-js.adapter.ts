@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode';
 import * as path from 'path';
+import * as fs from 'fs';
 import {
   IWhatsAppEngine,
   EngineStatus,
@@ -100,11 +101,35 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
         },
       });
 
+      this.cleanStaleChromeLocks();
       this.setupEventHandlers();
       await this.client.initialize();
     } catch (error) {
       this.setStatus(EngineStatus.FAILED);
       throw error;
+    }
+  }
+
+  /**
+   * Remove stale Chromium singleton lock files left in the LocalAuth profile when a
+   * container is killed without a clean shutdown (e.g. on redeploy). Without this,
+   * Chromium refuses to launch ("profile appears to be in use by another process").
+   */
+  private cleanStaleChromeLocks(): void {
+    try {
+      const profileDir = path.join(
+        path.resolve(this.config.sessionDataPath),
+        `session-${this.config.sessionId}`,
+      );
+      for (const lockFile of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
+        try {
+          fs.rmSync(path.join(profileDir, lockFile), { force: true });
+        } catch {
+          // ignore: file may not exist
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Could not clean stale Chrome locks: ${String(error)}`);
     }
   }
 
