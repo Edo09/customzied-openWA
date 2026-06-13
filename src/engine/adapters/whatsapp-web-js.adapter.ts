@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
+import { Client, LocalAuth, MessageMedia, Poll } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -486,8 +486,6 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
   async sendPollMessage(chatId: string, poll: PollInput): Promise<MessageResult> {
     this.ensureReady();
-    // Import Poll class dynamically from whatsapp-web.js
-    const { Poll } = await import('whatsapp-web.js');
     const msg = await this.client!.sendMessage(
       chatId,
       // messageSecret is typed as required in whatsapp-web.js but is optional at runtime
