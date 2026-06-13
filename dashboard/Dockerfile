@@ -1,12 +1,13 @@
-FROM node:20-alpine AS builder
+# Debian/glibc base (node:20-alpine/musl breaks Vite/Rollup native binaries on ARM)
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (npm install tolerates cross-platform optional deps better than npm ci)
+RUN npm install
 
 # Copy source code
 COPY . .
