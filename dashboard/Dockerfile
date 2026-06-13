@@ -9,8 +9,9 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install deps. --legacy-peer-deps: vite@8 vs @vitejs/plugin-react peer(^7) conflict
+# (works fine at runtime; npm 10 in the image is stricter than the npm 11 that wrote the lockfile)
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
