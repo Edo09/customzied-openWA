@@ -91,6 +91,21 @@ export interface LocationInput {
   address?: string;
 }
 
+export interface PollInput {
+  name: string;
+  options: string[];
+  allowMultipleAnswers?: boolean;
+}
+
+export interface PollVoteEvent {
+  messageId: string; // id of the poll creation message
+  pollName: string; // the poll question
+  voter: string; // chat id of the person who voted
+  chatId: string; // where to reply (same as voter)
+  selectedOptions: { name: string; localId: number }[];
+  timestamp: number;
+}
+
 export interface ReactionSender {
   senderId: string;
   emoji: string;
@@ -199,6 +214,7 @@ export interface EngineEventCallbacks {
   onReady?: (phone: string, pushName: string) => void;
   onMessage?: (message: IncomingMessage) => void;
   onMessageAck?: (messageId: string, ack: number) => void;
+  onPollVote?: (vote: PollVoteEvent) => void;
   onDisconnected?: (reason: string) => void;
   onStateChanged?: (state: EngineStatus) => void;
 }
@@ -227,6 +243,7 @@ export interface IWhatsAppEngine {
   sendLocationMessage(chatId: string, location: LocationInput): Promise<MessageResult>;
   sendContactMessage(chatId: string, contact: ContactCard): Promise<MessageResult>;
   sendStickerMessage(chatId: string, media: MediaInput): Promise<MessageResult>;
+  sendPollMessage(chatId: string, poll: PollInput): Promise<MessageResult>;
 
   // Reply & Forward
   replyToMessage(chatId: string, quotedMsgId: string, text: string): Promise<MessageResult>;

@@ -312,6 +312,21 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
             this.eventsGateway.emitMessage(id, finalMessage as Record<string, unknown>);
           });
       },
+      onPollVote: (vote): void => {
+        this.logger.debug(`Poll vote from ${vote.voter}`, {
+          sessionId: id,
+          messageId: vote.messageId,
+          action: 'poll_vote',
+        });
+        // Update last active timestamp
+        void this.sessionRepository.update(id, { lastActiveAt: new Date() });
+
+        const voteData = { ...vote } as Record<string, unknown>;
+        // Dispatch to webhooks
+        void this.webhookService.dispatch(id, 'poll.vote', voteData);
+        // Emit real-time event to WebSocket clients
+        this.eventsGateway.emitPollVote(id, voteData);
+      },
       onDisconnected: (reason: string): void => {
         this.logger.warn(`Session disconnected: ${reason}`, {
           sessionId: id,

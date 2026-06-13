@@ -14,6 +14,7 @@ import {
   GroupInfo,
   GroupParticipant,
   LocationInput,
+  PollInput,
   ContactCard,
   MessageReaction,
   Label,
@@ -192,6 +193,24 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
     this.client.on('message_ack', (msg, ack) => {
       this.callbacks.onMessageAck?.(msg.id._serialized, ack);
+    });
+
+    this.client.on('vote_update', vote => {
+      try {
+        this.callbacks.onPollVote?.({
+          messageId: vote.parentMessage.id._serialized,
+          pollName: vote.parentMessage.body,
+          voter: vote.voter,
+          chatId: vote.voter,
+          selectedOptions: (vote.selectedOptions ?? []).map(o => {
+            const opt = o as { id?: number; localId?: number; name: string };
+            return { name: opt.name, localId: opt.localId ?? opt.id ?? 0 };
+          }),
+          timestamp: vote.interractedAtTs,
+        });
+      } catch (error) {
+        this.logger.error('Error processing poll vote', String(error));
+      }
     });
 
     this.client.on('disconnected', reason => {
@@ -434,6 +453,24 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
     const msg = await this.client!.sendMessage(chatId, messageMedia, {
       sendMediaAsSticker: true,
     });
+    return {
+      id: msg.id._serialized,
+      timestamp: msg.timestamp,
+    };
+  }
+
+  async sendPollMessage(chatId: string, poll: PollInput): Promise<MessageResult> {
+    this.ensureReady();
+    // Import Poll class dynamically from whatsapp-web.js
+    const { Poll } = await import('whatsapp-web.js');
+    const msg = await this.client!.sendMessage(
+      chatId,
+      // messageSecret is typed as required in whatsapp-web.js but is optional at runtime
+      new Poll(poll.name, poll.options, {
+        allowMultipleAnswers: poll.allowMultipleAnswers === true,
+        messageSecret: undefined,
+      }),
+    );
     return {
       id: msg.id._serialized,
       timestamp: msg.timestamp,

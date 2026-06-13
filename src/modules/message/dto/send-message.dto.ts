@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, MaxLength, IsUrl, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+  IsUrl,
+  ValidateIf,
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
+  IsBoolean,
+} from 'class-validator';
 
 export class SendTextMessageDto {
   @ApiProperty({
@@ -81,4 +92,44 @@ export class MessageResponseDto {
 
   @ApiProperty({ example: 1706868000 })
   timestamp: number;
+}
+
+export class SendPollMessageDto {
+  @ApiProperty({
+    description: 'WhatsApp chat ID (phone@c.us for individual, groupId@g.us for groups)',
+    example: '628123456789@c.us',
+  })
+  @IsString()
+  @IsNotEmpty()
+  chatId: string;
+
+  @ApiProperty({
+    description: 'Poll question / title',
+    example: '¿Qué servicio te interesa?',
+    maxLength: 255,
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name: string;
+
+  @ApiProperty({
+    description: 'Poll options (between 2 and 12)',
+    example: ['DTF textil', 'UV DTF', 'Sublimación', 'Grabado láser'],
+    type: [String],
+  })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  options: string[];
+
+  @ApiPropertyOptional({
+    description: 'Allow selecting multiple options (single choice if false)',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowMultipleAnswers?: boolean;
 }

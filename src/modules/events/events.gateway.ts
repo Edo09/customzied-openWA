@@ -223,6 +223,13 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   /**
+   * Emit poll vote notification
+   */
+  emitPollVote(sessionId: string, data: Record<string, unknown>) {
+    this.emitToRooms(sessionId, 'poll.vote', data);
+  }
+
+  /**
    * Emit message sent notification
    */
   emitMessageSent(sessionId: string, message: Record<string, unknown>) {

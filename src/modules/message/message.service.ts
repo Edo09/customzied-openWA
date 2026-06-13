@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionService } from '../session/session.service';
-import { SendTextMessageDto, SendMediaMessageDto, MessageResponseDto } from './dto';
+import { SendTextMessageDto, SendMediaMessageDto, MessageResponseDto, SendPollMessageDto } from './dto';
 import { MediaInput } from '../../engine/interfaces/whatsapp-engine.interface';
 import { Message, MessageDirection, MessageStatus } from './entities/message.entity';
 import { HookManager } from '../../core/hooks';
@@ -72,6 +72,65 @@ export class MessageService {
       await this.messageRepository.save(message);
 
       // Execute hook on failure
+      await this.hookManager.execute(
+        'message:failed',
+        { sessionId, error: error instanceof Error ? error.message : String(error), input: finalDto },
+        { sessionId, source: 'MessageService' },
+      );
+
+      throw error;
+    }
+  }
+
+  async sendPoll(sessionId: string, dto: SendPollMessageDto): Promise<MessageResponseDto> {
+    // Execute hook before sending - plugins can modify or block
+    const { continue: shouldContinue, data: hookData } = await this.hookManager.execute(
+      'message:sending',
+      { sessionId, input: dto, type: 'poll' },
+      { sessionId, source: 'MessageService' },
+    );
+
+    if (!shouldContinue) {
+      throw new BadRequestException('Message sending blocked by plugin');
+    }
+
+    const finalDto = (hookData as { input: SendPollMessageDto }).input;
+
+    const engine = this.getEngine(sessionId);
+
+    // Save message as pending BEFORE sending
+    const message = await this.saveOutgoingMessage(sessionId, {
+      chatId: finalDto.chatId,
+      body: `📊 ${finalDto.name}`,
+      type: 'poll',
+    });
+
+    try {
+      const result = await engine.sendPollMessage(finalDto.chatId, {
+        name: finalDto.name,
+        options: finalDto.options,
+        allowMultipleAnswers: finalDto.allowMultipleAnswers,
+      });
+
+      message.waMessageId = result.id;
+      message.status = MessageStatus.SENT;
+      message.timestamp = result.timestamp;
+      await this.messageRepository.save(message);
+
+      await this.hookManager.execute(
+        'message:sent',
+        { sessionId, result, input: finalDto },
+        { sessionId, source: 'MessageService' },
+      );
+
+      return {
+        messageId: result.id,
+        timestamp: result.timestamp,
+      };
+    } catch (error) {
+      message.status = MessageStatus.FAILED;
+      await this.messageRepository.save(message);
+
       await this.hookManager.execute(
         'message:failed',
         { sessionId, error: error instanceof Error ? error.message : String(error), input: finalDto },
