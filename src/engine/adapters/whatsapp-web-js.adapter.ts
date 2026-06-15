@@ -753,6 +753,13 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
     this.logger.log(`Removed label ${labelId} from chat ${chatId}`);
   }
 
+  // Chat Operations
+  async markChatUnread(chatId: string): Promise<void> {
+    this.ensureReady();
+    await this.client!.markChatUnread(chatId);
+    this.logger.log(`Marked chat ${chatId} as unread`);
+  }
+
   // Channels/Newsletter (Phase 3)
   async getSubscribedChannels(): Promise<Channel[]> {
     this.ensureReady();

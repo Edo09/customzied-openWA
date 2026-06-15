@@ -296,6 +296,29 @@ export class MessageController {
     return { success: true };
   }
 
+  // ========== Chat Operations ==========
+
+  @Post('mark-unread')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark a chat as unread (so an advisor sees a pending notification)' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Chat marked as unread',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Session not active or invalid request',
+  })
+  async markUnread(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: { chatId: string },
+  ): Promise<{ success: boolean }> {
+    await this.messageService.markChatUnread(sessionId, dto);
+    return { success: true };
+  }
+
   // ========== Bulk Messaging ==========
 
   @Post('send-bulk')

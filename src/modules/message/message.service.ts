@@ -525,6 +525,13 @@ export class MessageService {
     await engine.deleteMessage(dto.chatId, dto.messageId, dto.forEveryone ?? true);
   }
 
+  // ========== Chat Operations ==========
+
+  async markChatUnread(sessionId: string, dto: { chatId: string }): Promise<void> {
+    const engine = this.getEngine(sessionId);
+    await engine.markChatUnread(dto.chatId);
+  }
+
   private getEngine(sessionId: string) {
     const engine = this.sessionService.getEngine(sessionId);
     if (!engine) {
