@@ -72,3 +72,9 @@ uploads/
 docs/plans/
 CLAUDE.md
 _docs/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
