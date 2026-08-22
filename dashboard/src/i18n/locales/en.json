@@ -152,6 +152,10 @@
       "errorTitle": "Delete Failed",
       "errorDefault": "Failed to delete session"
     },
+    "start": {
+      "errorTitle": "Start Failed",
+      "errorDefault": "Failed to start session"
+    },
     "qr": {
       "title": "Scan QR Code",
       "step1": "<strong>1.</strong> Open WhatsApp on your phone",

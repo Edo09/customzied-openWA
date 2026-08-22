@@ -25,6 +25,17 @@ export function Sessions() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  // Per-session pending flag, so one card can spin without blocking the others
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+
+  // Latest sessions, readable from socket handlers without re-subscribing
+  const sessionsRef = useRef<Session[]>([]);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  // Session the user just started: its QR modal opens as soon as the code arrives
+  const awaitingQrRef = useRef<string | null>(null);
 
   useWebSocket({
     onSessionStatus: useCallback(
@@ -33,13 +44,30 @@ export function Sessions() {
           prev.map(s => (s.id === event.sessionId ? { ...s, status: event.status as Session['status'] } : s)),
         );
         if (event.status === 'ready') {
+          awaitingQrRef.current = null;
+          setQrData(prev => (prev?.sessionId === event.sessionId ? null : prev));
           toast.success(t('sessions.toasts.readyTitle'), t('sessions.toasts.readyDesc'));
         } else if (event.status === 'disconnected') {
+          awaitingQrRef.current = null;
           toast.warning(t('sessions.toasts.disconnectedTitle'), t('sessions.toasts.disconnectedDesc'));
         }
       },
       [toast, t],
     ),
+    onQRCode: useCallback((event: { sessionId: string; qrCode: string }) => {
+      setQrData(prev => {
+        // Refresh the code if this session's modal is already open
+        if (prev?.sessionId === event.sessionId) return { ...prev, qrCode: event.qrCode };
+        // Otherwise only open it for the session the user just started
+        if (awaitingQrRef.current !== event.sessionId) return prev;
+        awaitingQrRef.current = null;
+        return {
+          sessionId: event.sessionId,
+          sessionName: sessionsRef.current.find(s => s.id === event.sessionId)?.name ?? '',
+          qrCode: event.qrCode,
+        };
+      });
+    }, []),
   });
 
   const fetchSessions = async () => {
@@ -133,17 +161,30 @@ export function Sessions() {
       return;
     }
 
+    setBusy(prev => ({ ...prev, [id]: true }));
+    // Do not ask for the QR here: the engine is still booting, so the request
+    // would fail and show an error even though the session started fine. The
+    // modal opens on its own once the backend emits session.qr.
+    awaitingQrRef.current = id;
+
     try {
       await sessionApi.start(id);
-      setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'connecting' } : s)));
+      setSessions(prev => prev.map(s => (s.id === id ? { ...s, status: 'connecting' } : s)));
       await fetchSessions();
-      handleShowQR(id);
     } catch (err) {
       console.error('Failed to start:', err);
       await fetchSessions();
       if (err instanceof Error && err.message.includes('already started')) {
         handleShowQR(id);
+      } else {
+        awaitingQrRef.current = null;
+        toast.error(
+          t('sessions.start.errorTitle'),
+          err instanceof Error ? err.message : t('sessions.start.errorDefault'),
+        );
       }
+    } finally {
+      setBusy(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -155,18 +196,22 @@ export function Sessions() {
       setQrData({ sessionId: id, sessionName, qrCode: qr.qrCode });
     } catch (err) {
       console.error('Failed to get QR:', err);
-      setError(t('sessions.qr.unavailable'));
+      toast.warning(t('sessions.qr.title'), t('sessions.qr.unavailable'));
     }
   };
 
   const handleStop = async (id: string) => {
+    setBusy(prev => ({ ...prev, [id]: true }));
     try {
       await sessionApi.stop(id);
-      setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'disconnected' } : s)));
+      setSessions(prev => prev.map(s => (s.id === id ? { ...s, status: 'disconnected' } : s)));
       if (qrData?.sessionId === id) setQrData(null);
+      awaitingQrRef.current = null;
     } catch (err) {
       console.error('Failed to stop:', err);
-      fetchSessions();
+      await fetchSessions();
+    } finally {
+      setBusy(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -479,18 +524,18 @@ export function Sessions() {
                 </button>
                 {canWrite &&
                 (session.status === 'created' || session.status === 'idle' || session.status === 'disconnected') ? (
-                  <button className="btn-action" onClick={() => handleStart(session.id)}>
-                    <Play size={16} />
+                  <button className="btn-action" onClick={() => handleStart(session.id)} disabled={busy[session.id]}>
+                    {busy[session.id] ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
                     {t('sessions.actions.start')}
                   </button>
                 ) : canWrite && ['ready', 'initializing', 'connecting', 'qr_ready'].includes(session.status) ? (
-                  <button className="btn-action" onClick={() => handleStop(session.id)}>
-                    <Square size={16} />
+                  <button className="btn-action" onClick={() => handleStop(session.id)} disabled={busy[session.id]}>
+                    {busy[session.id] ? <Loader2 size={16} className="animate-spin" /> : <Square size={16} />}
                     {t('sessions.actions.stop')}
                   </button>
                 ) : canWrite ? (
-                  <button className="btn-action" onClick={() => handleStart(session.id)}>
-                    <RefreshCw size={16} />
+                  <button className="btn-action" onClick={() => handleStart(session.id)} disabled={busy[session.id]}>
+                    {busy[session.id] ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                     {t('sessions.actions.reconnect')}
                   </button>
                 ) : null}

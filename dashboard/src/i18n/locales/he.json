@@ -152,6 +152,10 @@
       "errorTitle": "המחיקה נכשלה",
       "errorDefault": "מחיקת ה-Session נכשלה"
     },
+    "start": {
+      "errorTitle": "ההפעלה נכשלה",
+      "errorDefault": "הפעלת ה-Session נכשלה"
+    },
     "qr": {
       "title": "סריקת QR",
       "step1": "<strong>1.</strong> יש לפתוח את WhatsApp במכשיר",
