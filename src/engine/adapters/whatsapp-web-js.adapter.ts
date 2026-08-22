@@ -494,6 +494,18 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
         messageSecret: undefined,
       }),
     );
+
+    // whatsapp-web.js delivers the poll but does not always resolve to the sent
+    // Message. Reading msg.id on the undefined result threw a TypeError, which
+    // surfaced as a 500 even though the poll had already reached the chat.
+    if (!msg?.id?._serialized) {
+      this.logger.warn('Poll sent but whatsapp-web.js returned no message; responding without a message id');
+      return {
+        id: '',
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+    }
+
     return {
       id: msg.id._serialized,
       timestamp: msg.timestamp,
