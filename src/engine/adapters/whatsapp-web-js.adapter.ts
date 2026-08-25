@@ -360,6 +360,18 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
       caption: media.caption,
     });
 
+    // Same failure mode as sendPollMessage: whatsapp-web.js delivers the media
+    // but does not always resolve to the sent Message. Reading msg.id on the
+    // undefined result threw a TypeError, which surfaced as a 500 even though
+    // the image had already reached the chat.
+    if (!msg?.id?._serialized) {
+      this.logger.warn('Media sent but whatsapp-web.js returned no message; responding without a message id');
+      return {
+        id: '',
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+    }
+
     return {
       id: msg.id._serialized,
       timestamp: msg.timestamp,
