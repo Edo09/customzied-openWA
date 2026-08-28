@@ -93,7 +93,9 @@ services:
     pids_limit: ${OPENWA_PIDS_LIMIT:-2048}
     mem_limit: ${OPENWA_MEM_LIMIT:-2g} # tune up for many concurrent sessions
     ports:
-      - '127.0.0.1:${API_PORT:-2785}:2785'
+      # Published on all interfaces: this deployment is reached by IP (API + dashboard,
+      # which the API now serves itself). Upstream binds to 127.0.0.1 by default.
+      - '0.0.0.0:${API_PORT:-2785}:2785'
     expose:
       - '2785'
     environment:
@@ -133,6 +135,9 @@ services:
       # ENGINE_TYPE as unset, so .env.generated wins. Set ENGINE_TYPE in your .env/host to pin an
       # engine (e.g. baileys) — a real value flows through here and keeps top precedence.
       - ENGINE_TYPE=${ENGINE_TYPE:-}
+      # Attach a best-effort senderPhone to message.received when the sender arrives as an
+      # @lid privacy id. Off upstream; on here because the n8n flow keys replies off the phone.
+      - RESOLVE_LID_TO_PHONE=${RESOLVE_LID_TO_PHONE:-true}
       # Engine launch options (session data path, headless, browser args). Forwarded EMPTY by default
       # so the dashboard (Infrastructure > Engine) selections saved to data/.env.generated apply — like
       # ENGINE_TYPE above. main.ts treats a blank value as unset (.env.generated wins), and the app
