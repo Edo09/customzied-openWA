@@ -97,6 +97,10 @@ services:
     # the processes ask for it. Lower it via OPENWA_MEM_LIMIT on a host whose total RAM does not
     # leave room for this plus the host's own overhead.
     mem_limit: ${OPENWA_MEM_LIMIT:-4g} # tune up for many concurrent sessions
+    # Chromium shared memory; Docker's 64MB default is the classic cause of Puppeteer "Page crashed".
+    # The default PUPPETEER_ARGS also pass --disable-dev-shm-usage (Chromium falls back to /tmp), so
+    # this is belt-and-braces. It is what this deployment's server already runs with.
+    shm_size: 1gb
     ports:
       # Published on all interfaces: this deployment is reached by IP (API + dashboard,
       # which the API now serves itself). Upstream binds to 127.0.0.1 by default.
