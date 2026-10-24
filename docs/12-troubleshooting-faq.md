@@ -836,7 +836,7 @@ curl -H "Authorization: Bearer $METRICS_TOKEN" \
 # docker-compose.yml - Set memory limits
 services:
   openwa-api:
-    # The shipped compose already exposes this as mem_limit: ${OPENWA_MEM_LIMIT:-2g}
+    # The shipped compose already exposes this as mem_limit: ${OPENWA_MEM_LIMIT:-4g}
     mem_limit: 2g
     environment:
       # Optimize Puppeteer (whatsapp-web.js engine only)

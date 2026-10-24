@@ -76,10 +76,14 @@ describe('feature-flags', () => {
   // A flag the app reads is useless if the bundled compose never hands it to the container: the
   // operator sets it in .env, nothing happens, and there is no error to go on. That was the state of
   // AUTO_START_SESSIONS until this guard landed, so assert the forward exists rather than trusting it.
+  // This deployment goes further and defaults the flag ON (upstream forwards a blank, i.e. off),
+  // because a restart otherwise leaves authenticated sessions DISCONNECTED until someone presses
+  // Start. The default is asserted, not just the forward, so a merge from upstream that restores the
+  // blank fails here rather than in production days later.
   describe('bundled production compose', () => {
-    it('forwards AUTO_START_SESSIONS to the container', () => {
+    it('forwards AUTO_START_SESSIONS to the container, defaulted on', () => {
       const compose = fs.readFileSync(path.join(__dirname, '../../docker-compose.yml'), 'utf8');
-      expect(compose).toMatch(/^\s*- AUTO_START_SESSIONS=\$\{AUTO_START_SESSIONS:-\}$/m);
+      expect(compose).toMatch(/^\s*- AUTO_START_SESSIONS=\$\{AUTO_START_SESSIONS:-true\}$/m);
     });
   });
 

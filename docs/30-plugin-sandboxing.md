@@ -51,7 +51,7 @@ from disk is untrusted and sandboxed.
 - **Memory-kind boundary.** The heap cap bounds the V8 heap only. `Buffer`/`ArrayBuffer` allocations
   are native memory outside `maxOldGenerationSizeMb`, and worker threads share the host's address
   space, so a plugin that accumulates Buffers grows host RSS until the container's memory limit
-  (the bundled compose `mem_limit`, default 2g) kills the whole container, not just the worker.
+  (the bundled compose `mem_limit`, default 4g) kills the whole container, not just the worker.
   Buffer-heavy plugin workloads need that outer limit sized deliberately.
 
 ## What the sandbox does NOT guarantee
